@@ -1,12 +1,17 @@
+#define _GNU_SOURCE
 #include <errno.h>
+#include <sched.h>
 #include <netinet/in.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include "socket_cache.h"
@@ -16,6 +21,8 @@
 #else
 #define DEBUG(f_, ...)
 #endif
+
+#define NNS_NAME "nspce"
 
 typedef struct interfaces_s {
     int server_sockets[8];
@@ -65,7 +72,6 @@ static bool check_client_socket(interfaces_t* connection, int socket){
     }
     return false;
 }
-
 
 static void add_server_socket(interfaces_t* connection, int socket){
     DEBUG("%s: %d\n", __func__, socket);
@@ -285,8 +291,27 @@ static pthread_t get_thread_id_from_connection(uint16_t port){
     return -1;
 }
 
+static void move_thread_to_netns() {
+    const char *netns_path_fmt = "/var/run/netns/%s";
+    char netns_path[272]; /* 15 for "/var/.." + 256 for netns name + 1 '\0' */
+    int netns_fd;
+
+    if (strlen(NNS_NAME) > 256)
+        printf("Network namespace name \"%s\" is too long\n", NNS_NAME);
+
+    sprintf(netns_path, netns_path_fmt, NNS_NAME);
+
+    netns_fd = open(netns_path, O_RDONLY);
+    if (netns_fd == -1)
+        printf("Unable to open %s\n", netns_path);
+
+    if (setns(netns_fd, CLONE_NEWNET) == -1)
+        printf("setns failed: %s\n", strerror(errno));
+}
+
 void *client_thread_func(void *addr)
 {
+    move_thread_to_netns();
     DEBUG("%s:\n", "kek");
     struct sockaddr_in *server = (struct sockaddr_in *)addr;
     int socket_desc;

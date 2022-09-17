@@ -455,7 +455,7 @@ int listen(int sockfd, int backlog){
 
         if(!exists){
             add_connection(ntohs(addr.sin_port));
-            create_client("127.0.0.1", ntohs(addr.sin_port)); //creates thread
+            create_client("10.0.0.1", ntohs(addr.sin_port)); //creates thread
             printf("%s: DONE \n", "kek1");
         }
     }

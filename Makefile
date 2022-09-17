@@ -16,6 +16,7 @@ $(TARGET): $(OBJECTS)
 	@echo "Created shared library"
 	@echo "Linking library with test program"
 	@gcc -o libsrv ./test/tcpsrv.c ./ldtcp.so
+	@sudo setcap cap_sys_admin+ep ./libsrv
 
 $(OBJECTS): %.o : %.c $(INCLUDES)
 	@$(CC) $(CFLAGS) -c $< -o $@ #-DDEBUG_MODE
