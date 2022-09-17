@@ -40,6 +40,8 @@ int main(int argc, char **argv)
 
     portno = atoi(argv[1]);
 
+    printf("Starting server on port %d\n", portno);
+
     parentfd = socket(AF_INET, SOCK_STREAM, 0);
     if (parentfd < 0)
         error("ERROR opening socket");

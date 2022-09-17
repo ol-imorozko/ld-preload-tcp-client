@@ -12,13 +12,13 @@ OBJECTS  := socket_cache.o syscalls.o ld_preload_tcp_client.o
 rm       = rm -f
 
 $(TARGET): $(OBJECTS)
-	@$(LINKER) $(LFLAGS) -o ldtcp.so $(OBJECTS) -ldl
+	@$(LINKER) $(LFLAGS) -o ldtcp.so $(OBJECTS) -lpthread -ldl
 	@echo "Created shared library"
 	@echo "Linking library with test program"
 	@gcc -o libsrv ./test/tcpsrv.c ./ldtcp.so
 
 $(OBJECTS): %.o : %.c $(INCLUDES)
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@ #-DDEBUG_MODE
 	@echo "Compiled "$<" successfully!"
 
 .PHONY: clean

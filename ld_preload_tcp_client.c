@@ -37,7 +37,7 @@
 #define DEBUG(f_, ...) printf((f_), ##__VA_ARGS__)
 
 __attribute__ ((noreturn)) static void not_implemented(const char* func) {
-	printf("NOT IMPLEMENTED <%s>\n", func);
+    printf("NOT IMPLEMENTED <%s>\n", func);
     abort();
 }
 
@@ -120,8 +120,8 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags){
 }
 
 ssize_t write(int fd, const void *buf, size_t count){
-    DEBUG("%s --> %d %zu\n", __func__, fd, count);
-    DEBUG("%s: %p %ld\n", __func__, buf, count);
+    /* DEBUG("%s --> %d %zu\n", __func__, fd, count); */
+    /* DEBUG("%s: %p %ld\n", __func__, buf, count); */
     //if(server_socket_exists(fd)){
     //    return count;
     //}
@@ -138,20 +138,14 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
     return real_sendto(sockfd, buf, len, flags, dest_addr, addrlen);
 }
 
-void send_malformed_data(int client_socket)
-{
-    printf("Client socket is %d\n", client_socket);
-    char str[14] = "Hello, world!\n";
-    write(client_socket, str, 14);
-}
-
 ssize_t read(int fd, void *buf, size_t count){
     printf("==== %s ==== %zu\n", __func__, count);
     DEBUG("%s --> %d\n", __func__, fd);
 
     if(server_socket_exists(fd)){
-        send_malformed_data(get_client_socket_from_connection(server_socket_to_port(fd)));
-        sleep(1);
+        //notify client (thread)
+        /* sleep(2); */
+        send_malformed_data();
         return real_read(fd, buf, count);
         //init_nyx();
         //TODO return handle_next_packet(fd, buf, count, false);
@@ -166,18 +160,10 @@ ssize_t recv(int sockfd, void *buf, size_t len, int flags){
     DEBUG("%s --> %d\n", __func__, sockfd);
 
     if(server_socket_exists(sockfd)){
-        //init_nyx();
-        //TODO return handle_next_packet(sockfd, buf, len, false);
 
-        //printf("%s: not implemented\n", __func__);
-        //exit(0);
-        //memcpy(buf, "GET /mod_expire.dll HTTP/1.0\r\n\r", 31);
-        //ret = 32;
-        //return ret;
     }
     ret = real_recv(sockfd, buf, len, flags);
     printf("%s: %d\n", __func__, ret);
-    //}
     return ret;
 }
 
@@ -334,6 +320,7 @@ int close(int fd){
         /* broken ? */
         if(get_active_connections() == 0){
             DEBUG("RELEASE!\n");
+            return real_close(fd);
             //while(1){}
             //
             //}
@@ -397,68 +384,9 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout){
     return ret;
 }
 
-extern void foo(void);
-
-int connect_to_server(const char* ip, int port){
-    int socket_desc;
-    struct sockaddr_in server;
-
-    printf("%s enter\n", __func__);
-
-#ifdef TARGET_PORT
-    if(port != TARGET_PORT){
-        return 0;
-    }
-#endif
-
-    printf("%s: %s %d\n", __func__, ip, port);
-    //exit(0);
-
-    /* remove this line and the guest TCP stack will break => FIX ME */
-    //init_nyx();
-
-
-    printf("%s enter2\n", __func__);
-
-    //Create socket
-    printf("%s: create socket...\n", __func__);
-
-
-    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (socket_desc == -1)
-    {
-        DEBUG("Could not create socket");
-        exit(-1);
-    }
-
-    server.sin_addr.s_addr = inet_addr(ip); //inet_addr(ip); //"74.125.235.20");
-    server.sin_family = AF_INET;
-    server.sin_port = htons(port);
-
-    //Connect to remote server
-    printf("%s: connect to socket...\n", __func__);
-    if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-        DEBUG("connect error %s", strerror(errno));
-        exit(-1);
-    }
-
-    //		init_nyx();
-
-
-    assert(set_client_socket_to_connection(port, socket_desc));
-
-
-    //send(socket_desc, "ABCD", 5, 0);
-
-    printf("Connected");
-    return 0;
-}
-
 int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags){
     printf("============ %s ===========\n", __func__);
     //sleep(1);
-
 
     int ret = real_accept4(sockfd, addr, addrlen, flags);
 
@@ -467,7 +395,7 @@ int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags){
     if(ret != -1 && getsockname(sockfd, (struct sockaddr *) &tmp_addr, (void*)&len) != -1){
         printf("%s: port number %d\n", __func__, ntohs(tmp_addr.sin_port));
         if(ret != -1) {
-            printf("%s %d %d\n", __func__, tmp_addr.sin_port, ret);
+            printf("%s: %d %d\n", __func__, ntohs(tmp_addr.sin_port), ret);
             assert(set_server_socket_to_connection(ntohs(tmp_addr.sin_port), ret));
         }
         printf("%s: port number %d\n", __func__, ntohs(tmp_addr.sin_port));
@@ -526,13 +454,12 @@ int listen(int sockfd, int backlog){
         ret = real_listen(sockfd, backlog);
 
         if(!exists){
-                add_connection(ntohs(addr.sin_port));
-                connect_to_server("127.0.0.1", ntohs(addr.sin_port)); /* fix me */
-                printf("%s: DONE \n", __func__);
+            add_connection(ntohs(addr.sin_port));
+            create_client("127.0.0.1", ntohs(addr.sin_port)); //creates thread
+            printf("%s: DONE \n", "kek1");
         }
     }
 
-    //exit(0);
     return ret;
 }
 
